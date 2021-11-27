@@ -34,11 +34,22 @@ class AuditTrail:
                             f'{AuditTrail.__date_format()}_archive_{self.archive_name_complete}')
 
     def __get_arch_custom_name(self, custom_year, custom_month) -> str:
+        """
+        formats the name of the file to be extracted and converted to pd.Dataframe
+        :param custom_year: year or archive (e.g. 2021)
+        :param custom_month: month of archive (e.g. 04)
+        :return: str
+        """
         return os.path.join(self.hist_folder_name,
                             f'{custom_year}-{custom_month}_archive_{self.archive_name_complete}')
 
     def __pickle_dataset(self):
-        self.init_dataset.to_pickle(self.archive_name)
+        try:
+            if self.init_dataset.shape[0] == 0:
+                raise ValueError("Dataframe is empty.")
+            self.init_dataset.to_pickle(self.archive_name)
+        except ValueError:
+            print('Dataset is empty. Nothing to archive.')
 
     def get_extracted_data(self, arch_year, arch_month) -> pd.DataFrame:
         """
@@ -53,6 +64,10 @@ class AuditTrail:
         return output_df
 
     def __remove_bin(self):
+        """
+        removes the binary file;
+        used after archiving/extracting
+        """
         os.remove(self.archive_name)
 
     def archive_data(self):
@@ -73,6 +88,14 @@ class AuditTrail:
         """
         reads an already exiting archive and moves it to binary file
         """
+        try:
+            fname_to_be_extracted = self.__get_arch_custom_name(c_year, c_month)
+            if not os.path.isfile(fname_to_be_extracted):
+                raise FileExistsError("Archive file is not found.")
+        except FileExistsError:
+            print('There is no archive for the selected period.')
+            return
+
         with bz2.open(self.__get_arch_custom_name(c_year, c_month), 'rb') as exiting_archive, \
                 open(self.archive_name, 'wb') as new_excel:
             new_excel.write(exiting_archive.read())
