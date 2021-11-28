@@ -2,6 +2,7 @@ import os
 import bz2
 from datetime import datetime
 import pandas as pd
+from src.custom_logger import CustomLogger
 
 
 class AuditTrail:
@@ -16,6 +17,7 @@ class AuditTrail:
         self.hist_folder_name = 'archive_hist'
         self.extracted_dataset = None
 
+        self.audit_logger = CustomLogger(self.archive_name, 'info')
         self.__create_hist_folder()
 
     @property
@@ -48,8 +50,9 @@ class AuditTrail:
             if self.init_dataset.shape[0] == 0:
                 raise ValueError("Dataframe is empty.")
             self.init_dataset.to_pickle(self.archive_name)
+            self.audit_logger.log_message('Datatset valid for achiving.')
         except ValueError:
-            print('Dataset is empty. Nothing to archive.')
+            self.audit_logger.log_message('Dataset not qualified for archving.')
 
     def get_extracted_data(self, arch_year, arch_month) -> pd.DataFrame:
         """
@@ -60,7 +63,7 @@ class AuditTrail:
         self.extract_data(arch_year, arch_month)
         output_df = pd.read_pickle(self.archive_name)
         self.__remove_bin()
-        print('Dataset extracted.')
+        self.audit_logger.log_message('Extracting performed.')
         return output_df
 
     def __remove_bin(self):
@@ -81,8 +84,7 @@ class AuditTrail:
                 bz2.open(self.__get_arch_name_path(), 'wb') as excel_archived:
             excel_archived.write(excel_input.read())
         self.__remove_bin()
-
-        print('Dataset archived.')
+        self.audit_logger.log_message('Archiving complete.')
 
     def extract_data(self, c_year, c_month):
         """
@@ -93,7 +95,7 @@ class AuditTrail:
             if not os.path.isfile(fname_to_be_extracted):
                 raise FileExistsError("Archive file is not found.")
         except FileExistsError:
-            print('There is no archive for the selected period.')
+            self.audit_logger.log_message('Data not available for selected period.')
             return
 
         with bz2.open(self.__get_arch_custom_name(c_year, c_month), 'rb') as exiting_archive, \
